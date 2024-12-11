@@ -10,7 +10,7 @@ This plugin generates an HTML report of your beets library that can be helpful f
 - Installing and running the [mbsync plugin](https://docs.beets.io/en/latest/plugins/mbsync.html) is highly recommended to make sure you are generating a report from the most recent MusicBrainz data. 
 
 ## Installation
-Download [mbhelperplugin.py](https://github.com/lazybookwyrm/BeetsPlugins/blob/main/mbhelperplugin.py) and install it in your beets configuration. 
+Download [mbhelperplugin.py](https://github.com/mistwyrm/BeetsPlugins/blob/main/mbhelperplugin.py) and install it in your beets configuration. 
 
 For instructions on installing a 3rd party beets plugin, please reference the section entitled [Other Plugins](https://docs.beets.io/en/latest/plugins/index.html#other-plugins) in the beets documentation for plugins.
 
