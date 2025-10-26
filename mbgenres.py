@@ -8,6 +8,7 @@ from operator import itemgetter
 from itertools import groupby
 
 WHITELISTFILE = os.path.join(os.path.dirname(__file__), "tagwhitelist.txt")
+BLACKLISTFILE = os.path.join(os.path.dirname(__file__), "tagblacklist.txt")
 VERSION = "1.1"
 STATUSUPDATED = 1
 STATUSSKIPPED = 2
@@ -23,6 +24,9 @@ class MBGenresPlugin(plugins.BeetsPlugin):
     
     # Stores the genre whitelist
     whitelist = [];
+
+    # Stores the genre blacklist
+    blacklist = [];
 
     def __init__(self):
         super().__init__()
@@ -55,6 +59,15 @@ class MBGenresPlugin(plugins.BeetsPlugin):
         except:
             self._log.debug("Whitelist file does not exist")
             open(WHITELISTFILE, "a").close()
+
+        # Read genres from blacklist file, creating the file if it does not exist
+        try:
+            with open(BLACKLISTFILE, "r") as f:
+                for line in f:
+                    self.blacklist.append(line.strip())
+        except:
+            self._log.debug("Blacklist file does not exist")
+            open(BLACKLISTFILE, "a").close()
             
     
     def commands(self):
@@ -202,6 +215,17 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                         if int(tag["count"]) >= self.config["minvotes"].get() and tag["name"].lower() in (item.lower() for item in self.whitelist)
                     ]
                     tags = list(set(genre_data + tag_data))
+
+                    # check if there are more than one tags in the list, if not skip the pruning
+                    if len(tags) > 1:
+                        self._log.debug(u"found more than one tag")
+                        for tag in tags:
+                            self._log.debug(u"{0}: {1}", tag[0], tag[1])
+                            # check if any tags are in the tag blacklist
+                            if tag[0].lower() in (item.lower() for item in self.blacklist):
+                                self._log.debug(u"found {0} in blacklist, removing it", tag[0])
+                                tags.remove(tag)
+
                     return tags
             except:
                 self._log.debug(u"Attempt {0}: Problem contacting MusicBrainz, unable to fetch genres for {1} {2}", str(attempt+1), type, mbid)
