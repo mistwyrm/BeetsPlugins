@@ -8,8 +8,8 @@ from operator import itemgetter
 from itertools import groupby
 
 WHITELISTFILE = os.path.join(os.path.dirname(__file__), "tagwhitelist.txt")
-BLACKLISTFILE = os.path.join(os.path.dirname(__file__), "tagblacklist.txt")
-VERSION = "1.2"
+BLACKLISTFILE = os.path.join(os.path.dirname(__file__), "blacklist.txt")
+VERSION = "1.2.1"
 STATUSUPDATED = 1
 STATUSSKIPPED = 2
 STATUSERRORED = 3
