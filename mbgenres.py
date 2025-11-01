@@ -8,7 +8,8 @@ from operator import itemgetter
 from itertools import groupby
 
 WHITELISTFILE = os.path.join(os.path.dirname(__file__), "tagwhitelist.txt")
-VERSION = "1.1"
+BLACKLISTFILE = os.path.join(os.path.dirname(__file__), "tagblacklist.txt")
+VERSION = "1.2"
 STATUSUPDATED = 1
 STATUSSKIPPED = 2
 STATUSERRORED = 3
@@ -23,6 +24,9 @@ class MBGenresPlugin(plugins.BeetsPlugin):
     
     # Stores the genre whitelist
     whitelist = [];
+
+    # Stores the genre blacklist
+    blacklist = [];
 
     def __init__(self):
         super().__init__()
@@ -40,6 +44,7 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                 "separator": ";",
                 "titlecase": False,
                 "updatefrequency": 7,
+                "alwaysblacklist": True,
             }
         )
 
@@ -55,6 +60,15 @@ class MBGenresPlugin(plugins.BeetsPlugin):
         except:
             self._log.debug("Whitelist file does not exist")
             open(WHITELISTFILE, "a").close()
+
+        # Read genres from blacklist file, creating the file if it does not exist
+        try:
+            with open(BLACKLISTFILE, "r") as f:
+                for line in f:
+                    self.blacklist.append(line.strip())
+        except:
+            self._log.debug("Blacklist file does not exist")
+            open(BLACKLISTFILE, "a").close()
             
     
     def commands(self):
@@ -97,10 +111,21 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                 return STATUSERRORED
             mbgenres = list(set(releasegenre + self.getGenres("release-group", album.mb_releasegroupid)))
 
+            # Remove blacklisted tags
+            if len(mbgenres) != 0:
+                filteredgenres = [genre for genre in mbgenres if genre[0].lower() not in (item.lower() for item in self.blacklist)]
+                if len(filteredgenres) != 0 or self.config["alwaysblacklist"].get():
+                    mbgenres = filteredgenres
+
             # If no genres are retrieved for the release or release group, fallback to the artist's genres if enabled
             if len(mbgenres) == 0 and self.config["artistfallback"].get():
                 mbgenres = self.getGenres("artist", album.mb_albumartistid)
-            
+                # Remove blacklisted tags
+                if len(mbgenres) != 0:
+                    filteredgenres = [genre for genre in mbgenres if genre[0].lower() not in (item.lower() for item in self.blacklist)]
+                    if len(filteredgenres) != 0 or self.config["alwaysblacklist"].get():
+                        mbgenres = filteredgenres
+
             # If genres were found, processes them
             if len(mbgenres) != 0:
                 # Sort by tag name
