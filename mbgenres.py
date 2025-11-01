@@ -9,7 +9,7 @@ from itertools import groupby
 
 WHITELISTFILE = os.path.join(os.path.dirname(__file__), "tagwhitelist.txt")
 BLACKLISTFILE = os.path.join(os.path.dirname(__file__), "tagblacklist.txt")
-VERSION = "1.1"
+VERSION = "1.2"
 STATUSUPDATED = 1
 STATUSSKIPPED = 2
 STATUSERRORED = 3
@@ -44,6 +44,7 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                 "separator": ";",
                 "titlecase": False,
                 "updatefrequency": 7,
+                "alwaysblacklist": True,
             }
         )
 
@@ -110,10 +111,21 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                 return STATUSERRORED
             mbgenres = list(set(releasegenre + self.getGenres("release-group", album.mb_releasegroupid)))
 
+            # Remove blacklisted tags
+            if len(mbgenres) != 0:
+                filteredgenres = [genre for genre in mbgenres if genre[0].lower() not in (item.lower() for item in self.blacklist)]
+                if len(filteredgenres) != 0 or self.config["alwaysblacklist"].get():
+                    mbgenres = filteredgenres
+
             # If no genres are retrieved for the release or release group, fallback to the artist's genres if enabled
             if len(mbgenres) == 0 and self.config["artistfallback"].get():
                 mbgenres = self.getGenres("artist", album.mb_albumartistid)
-            
+                # Remove blacklisted tags
+                if len(mbgenres) != 0:
+                    filteredgenres = [genre for genre in mbgenres if genre[0].lower() not in (item.lower() for item in self.blacklist)]
+                    if len(filteredgenres) != 0 or self.config["alwaysblacklist"].get():
+                        mbgenres = filteredgenres
+
             # If genres were found, processes them
             if len(mbgenres) != 0:
                 # Sort by tag name
@@ -215,17 +227,6 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                         if int(tag["count"]) >= self.config["minvotes"].get() and tag["name"].lower() in (item.lower() for item in self.whitelist)
                     ]
                     tags = list(set(genre_data + tag_data))
-
-                    # check if there are more than one tags in the list, if not skip the pruning
-                    if len(tags) > 1:
-                        self._log.debug(u"found more than one tag")
-                        for tag in tags:
-                            self._log.debug(u"{0}: {1}", tag[0], tag[1])
-                            # check if any tags are in the tag blacklist
-                            if tag[0].lower() in (item.lower() for item in self.blacklist):
-                                self._log.debug(u"found {0} in blacklist, removing it", tag[0])
-                                tags.remove(tag)
-
                     return tags
             except:
                 self._log.debug(u"Attempt {0}: Problem contacting MusicBrainz, unable to fetch genres for {1} {2}", str(attempt+1), type, mbid)

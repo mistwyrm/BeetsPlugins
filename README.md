@@ -26,9 +26,14 @@ The following configuration options can be added to your beets config file under
 - **separator**: The string used to separate multiple genres. Default: ```;```.
 - **titlecase**: If set to ```True```, then all genres will be title cased. If set to ```False```, all genres will be lowercased. Default: ```False```.
 - **updatefrequency**: How many days between genre updates. MusicBrainz genres will not be fetched for releases that have been updated within that number of days. Use the ```-F``` or ```--force``` option when manually running to override. Default: ```7```.
+- **alwaysblacklist**: If set to ```True```, genres in the ```blacklist.txt``` file will be removed with no exceptions. If set to ```False```, blacklisted genres will be kept if they are the only available genres. Default: ```True```.<br><br>
+***Note: The blacklist is evaluated before (and after) the optional artist fallback. If ```alwaysblacklist``` is set to ```False``` and blacklisted genres are the only available genres at the release level, the artist fallback will not run.***
 
-### Additional Genres or Tags
+### Whitelisting Additional Genres or Tags
 By default the plugin only imports genres in [MusicBrainz's genre list](https://musicbrainz.org/genres). If you would like to whitelist other genres or tags, you can add them to the file ```tagwhitelist.txt``` in the same folder you placed the plugin in. Each whitelisted tag should be entered on its own line. ```tagwhitelist.txt``` can be manually created, or can be automatically created by running the plugin once.
+
+### Blacklisting Genres or Tags
+If you would like to blacklist genres or tags, you can add them to the file ```blacklist.txt``` in the same folder you placed the plugin in. Each blacklisted tag should be entered on its own line. ```blacklist.txt``` can be manually created, or can be automatically created by running the plugin once.
 
 ## Manual Use
 The plugin can be manually run with the command ```beet mbgenres [QUERY]```. If you would like to ignore the ```updatefrequency``` config setting and force a genre update, you can use the command ```beet mbgenres -F [QUERY]``` or ```beet mbgenres --force [QUERY]```.
