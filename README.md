@@ -23,7 +23,6 @@ The following configuration options can be added to your beets config file under
 - **artistfallback**: If set to ```True```, fetches genres from the release artist if no genres are found at the release or release group level. Default: ```True```.
 - **replace**: If set to ```True```, all existing genres on tracks will be replaced with MusicBrainz genres or set to the ```fallback``` value if no genres are found. If set to ```False```, the MusicBrainz genres will be added to the existing genres on albums instead of replacing them. Default: ```False```.
 - **auto**: If set to ```True```, genres will be added on album imports. If set to ```False```, genres will only be added when manually run. Default: ```False```.
-- **separator**: The string used to separate multiple genres. Default: ```;```.
 - **titlecase**: If set to ```True```, then all genres will be title cased. If set to ```False```, all genres will be lowercased. Default: ```False```.
 - **updatefrequency**: How many days between genre updates. MusicBrainz genres will not be fetched for releases that have been updated within that number of days. Use the ```-F``` or ```--force``` option when manually running to override. Default: ```7```.
 - **alwaysblacklist**: If set to ```True```, genres in the ```blacklist.txt``` file will be removed with no exceptions. If set to ```False```, blacklisted genres will be kept if they are the only available genres. Default: ```True```.<br><br>

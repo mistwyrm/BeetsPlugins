@@ -9,7 +9,7 @@ from itertools import groupby
 
 WHITELISTFILE = os.path.join(os.path.dirname(__file__), "tagwhitelist.txt")
 BLACKLISTFILE = os.path.join(os.path.dirname(__file__), "blacklist.txt")
-VERSION = "1.2.1"
+VERSION = "1.3"
 STATUSUPDATED = 1
 STATUSSKIPPED = 2
 STATUSERRORED = 3
@@ -41,7 +41,6 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                 "artistfallback": True,
                 "replace": False,
                 "auto": False,
-                "separator": ";",
                 "titlecase": False,
                 "updatefrequency": 7,
                 "alwaysblacklist": True,
@@ -104,12 +103,13 @@ class MBGenresPlugin(plugins.BeetsPlugin):
     def writeAlbumTags(self, album, force, write):
         # Always runs if forced or genre does not exist, otherwise checks if genre has been updated in the last x days (specified by updatefrequency in config)
         if force or not hasattr(album, "genreupdated") or len(album.genreupdated) == 0 or (datetime.datetime.strptime(album.genreupdated, "%d/%m/%Y") + datetime.timedelta(days=self.config["updatefrequency"].get())) < datetime.datetime.now():              
-            genre = self.config["fallback"].get()
+            genres = [] if self.config["fallback"].get() in (None,"") else [self.config["fallback"].get()]
             # Get tags from release and release groups
             releasegenre = self.getGenres("release", album.mb_albumid)
-            if releasegenre == STATUSERRORED:
+            releasegroupgenre = self.getGenres("release-group", album.mb_releasegroupid)
+            if releasegenre == STATUSERRORED or releasegroupgenre == STATUSERRORED:
                 return STATUSERRORED
-            mbgenres = list(set(releasegenre + self.getGenres("release-group", album.mb_releasegroupid)))
+            mbgenres = list(set(releasegenre + releasegroupgenre))
 
             # Remove blacklisted tags
             if len(mbgenres) != 0:
@@ -119,7 +119,10 @@ class MBGenresPlugin(plugins.BeetsPlugin):
 
             # If no genres are retrieved for the release or release group, fallback to the artist's genres if enabled
             if len(mbgenres) == 0 and self.config["artistfallback"].get():
-                mbgenres = self.getGenres("artist", album.mb_albumartistid)
+                artistgenre = self.getGenres("artist", album.mb_albumartistid)
+                if artistgenre == STATUSERRORED:
+                    return STATUSERRORED
+                mbgenres = artistgenre
                 # Remove blacklisted tags
                 if len(mbgenres) != 0:
                     filteredgenres = [genre for genre in mbgenres if genre[0].lower() not in (item.lower() for item in self.blacklist)]
@@ -151,44 +154,52 @@ class MBGenresPlugin(plugins.BeetsPlugin):
                 if not self.config["dynamiccount"].get():
                     mbgenres = mbgenres[slice(self.config["genrecount"].get())]
 
-                # If genre replacement is configured to false, then combine the old genre list with the new genre list
-                finalgenres = [x[0] for x in mbgenres]
-                if not self.config["replace"].get() and album.genre:
-                    oldgenres = album.genre.lower().split(self.config["separator"].get())
-                    finalgenres = list(set(oldgenres + finalgenres))
+                # Extract only the genre names, dropping any other information
+                genres = [x[0] for x in mbgenres]
 
-                # Convert list into a separated genre string
-                finalgenres.sort()
-                genre = self.config["separator"].get().join(finalgenres);
+                # If genre replacement is configured to false, then combine the old genre list with the new genre list
+                if not self.config["replace"].get() and album.genres:
+                    genres = album.genres + genres
             
             # If no genres were found on MusicBrainz and genre replacement is false, return
             elif not self.config["replace"].get() or self.config["fallback"].get() is None:
                 return STATUSSKIPPED
             
-            
+            # Convert genres to desired casing
+            if genres:
+                if self.config["titlecase"].get():
+                    genres = [genre.title() for genre in genres]
+                else:
+                    genres = [genre.lower() for genre in genres]
+
+            # Deduplicate and sort list for comparison
+            genres = list(set(genres))
+            genres.sort()
 
             # Store results and set date updated field
-            if genre:
-                if self.config["titlecase"].get() and album.genre != genre.title():
-                    album.genre = genre.title()
-                elif album.genre != genre.lower():
-                    album.genre = genre.lower()
-                else:
-                    if len(album.genre) == 0:
+            # If album's existing genres do not match new genres, update album's genres
+            if album.genres != genres:
+                album.genres = genres
+            # If existing genres do match new genres empty the update date field and return skipped
+            else:
+                if len(album.genres) == 0:
                         album.genreupdated = None
-                    else:
-                        album.genreupdated = datetime.datetime.now().strftime("%d/%m/%Y")
-                    album.store()
-                    for item in album.items():
-                        if write:
-                            item.try_write()
-                    return STATUSSKIPPED
-            else:
-                album.genre = genre
-            if len(album.genre) == 0:
+                else:
+                    album.genreupdated = datetime.datetime.now().strftime("%d/%m/%Y")
+                
+                album.store()
+                for item in album.items():
+                    if write:
+                        item.try_write()
+                return STATUSSKIPPED
+
+            # If the updated genre list is emptied, empty the update date field
+            if len(album.genres) == 0:
                 album.genreupdated = None
+            
+            # If the new genre list isn't empty, log the updated list and store 
             else:
-                self._log.info(u'Added genre(s) [{0}] to "{1}" by "{2}"',  album.genre, album.album, album.albumartist)
+                self._log.info(u'Added genre(s) {0} to "{1}" by "{2}"',  album.genres, album.album, album.albumartist)
                 album.genreupdated = datetime.datetime.now().strftime("%d/%m/%Y")
             
             album.store()
